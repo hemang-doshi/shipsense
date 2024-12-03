@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Package {
+  id                      Int               @id @default(autoincrement()) @db.UnsignedInt
+  tracking_number         String            @unique
+  user_id                 String
+  status                  String
+  description             String?           @db.Text
+  origin_text             String?           @db.Text
+  origin_latitude         Float?            @db.Float
+  origin_longitude        Float?            @db.Float
+  destination_text        String?           @db.Text
+  destination_latitude    Float?            @db.Float
+  destination_longitude   Float?            @db.Float
+  estimated_delivery_date DateTime?         @db.Date
+  created_at              DateTime          @default(now()) @db.Timestamp
+  tracking_events         TrackingEvent[]
+  transit_events          TransitEvent[]
+  delivery_vehicles       DeliveryVehicle[]
+  notifications           Notification[]
+}
+
+model DeliveryVehicle {
+  id                      Int             @id @default(autoincrement()) @db.UnsignedInt
+  vehicle_number          String          @db.VarChar(50)
+  driver_name             String?         @db.VarChar(100)
+  driver_contact          String?         @db.VarChar(15)
+  last_update             DateTime        @default(now()) @db.Timestamp
+  tracking_events         TrackingEvent[]
+  TransitEvent            TransitEvent?   @relation(fields: [transitEventId], references: [id])
+  transitEventId          Int?            @db.UnsignedInt
+  Package                 Package?        @relation(fields: [package_tracking_number], references: [tracking_number])
+  package_tracking_number String? // This field links to Package.tracking_number
+}
+
+model TransitEvent {
+  id                      Int               @id @default(autoincrement()) @db.UnsignedInt
+  reached_text            String            @db.Text
+  reached_latitude        Float             @db.Float
+  reached_longitude       Float             @db.Float
+  next_text               String            @db.Text
+  next_latitude           Float             @db.Float
+  next_longitude          Float             @db.Float
+  timestamp               DateTime          @default(now()) @db.Timestamp
+  delivery_vehicle        DeliveryVehicle[]
+  Package                 Package?          @relation(fields: [package_tracking_number], references: [tracking_number])
+  package_tracking_number String? // This field links to Package.tracking_number
+}
+
+model TrackingEvent {
+  id                      Int              @id @default(autoincrement()) @db.UnsignedInt
+  package_tracking_number String           @db.VarChar(50) // This links to Package.tracking_number
+  vehicle_id              Int?             @db.UnsignedInt
+  event_type              String           @db.VarChar(50)
+  event_latitude          Float?           @db.Float
+  event_longitude         Float?           @db.Float
+  timestamp               DateTime         @default(now()) @db.Timestamp
+  package                 Package          @relation(fields: [package_tracking_number], references: [tracking_number])
+  vehicle                 DeliveryVehicle? @relation(fields: [vehicle_id], references: [id])
+}
+
+model Notification {
+  id                      Int      @id @default(autoincrement()) @db.UnsignedInt
+  user_id                 Int
+  package_tracking_number String   @db.VarChar(50) // This links to Package.tracking_number
+  message                 String   @db.Text
+  sent_at                 DateTime @default(now()) @db.Timestamp
+  package                 Package  @relation(fields: [package_tracking_number], references: [tracking_number])
+}
